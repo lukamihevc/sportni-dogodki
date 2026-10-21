@@ -1,0 +1,1 @@
+docker run -p 8081:8080 --name sportni-dogodki-container -d lukamihevc/sportni-dogodki:latest
