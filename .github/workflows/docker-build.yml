@@ -1,13 +1,17 @@
 
-name: Docker CI
+name: Docker CI/CD
 
 on:
   push:
     branches:
       - main
 
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
@@ -32,3 +36,38 @@ jobs:
           tags: |
             lukamihevc/sportni-dogodki:latest
             lukamihevc/sportni-dogodki:${{ github.sha }}
+
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy to Azure Container Instances
+        shell: bash
+        run: |
+          DNS_LABEL=$(az container show \
+            --resource-group rg-sportni-dogodki \
+            --name sportni-dogodki \
+            --query ipAddress.dnsNameLabel \
+            --output tsv)
+
+          if [ -z "$DNS_LABEL" ] || [ "$DNS_LABEL" = "None" ]; then
+            echo "ERROR: Existing Azure DNS label not found."
+            exit 1
+          fi
+
+          az container create \
+            --resource-group rg-sportni-dogodki \
+            --name sportni-dogodki \
+            --location switzerlandnorth \
+            --os-type Linux \
+            --image "lukamihevc/sportni-dogodki:${{ github.sha }}" \
+            --cpu 1 \
+            --memory 1.5 \
+            --ports 8080 \
+            --protocol TCP \
+            --ip-address Public \
+            --dns-name-label "$DNS_LABEL" \
+            --restart-policy Always
