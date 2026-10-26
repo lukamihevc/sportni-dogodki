@@ -49,7 +49,7 @@ jobs:
           RG="rg-sportni-dogodki"
           NAME="sportni-dogodki"
           DNS=$(az container show -g "$RG" -n "$NAME" --query ipAddress.dnsNameLabel -o tsv)
-
+          az container delete --resource-group "$RG" --name "$NAME" --yes
           az container create \
             --resource-group "$RG" \
             --name "$NAME" \
