@@ -11,11 +11,12 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
-app.UseStaticFiles();
 app.UseRouting();
 app.UseAuthorization();
 
-app.MapRazorPages();
+app.MapStaticAssets();
+app.MapRazorPages().WithStaticAssets();
+
 app.MapGet("/health", () => Results.Ok("OK"));
 
 app.Run();
