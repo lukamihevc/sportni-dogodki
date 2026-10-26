@@ -62,8 +62,7 @@ jobs:
             --protocol TCP \
             --ip-address Public \
             --dns-name-label "$DNS" \
-            --restart-policy Always
-
+            --restart-policy OnFailure
           az container show -g "$RG" -n "$NAME" \
             --query "{State:instanceView.state,Image:containers[0].image,FQDN:ipAddress.fqdn}" \
             -o table
