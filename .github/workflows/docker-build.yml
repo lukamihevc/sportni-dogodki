@@ -1,10 +1,11 @@
 
-name: Docker CI/CD
+name: Build and deploy to Azure
 
 on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -27,7 +28,7 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build and push Docker image
+      - name: Build and push image
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -47,27 +48,39 @@ jobs:
       - name: Deploy to Azure Container Instances
         shell: bash
         run: |
+          set -euo pipefail
+
+          RESOURCE_GROUP="rg-sportni-dogodki"
+          CONTAINER_NAME="sportni-dogodki"
+          IMAGE="lukamihevc/sportni-dogodki:${{ github.sha }}"
+
           DNS_LABEL=$(az container show \
-            --resource-group rg-sportni-dogodki \
-            --name sportni-dogodki \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "$CONTAINER_NAME" \
             --query ipAddress.dnsNameLabel \
             --output tsv)
 
           if [ -z "$DNS_LABEL" ] || [ "$DNS_LABEL" = "None" ]; then
-            echo "ERROR: Existing Azure DNS label not found."
+            echo "ERROR: Azure DNS label was not found."
             exit 1
           fi
 
           az container create \
-            --resource-group rg-sportni-dogodki \
-            --name sportni-dogodki \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "$CONTAINER_NAME" \
             --location switzerlandnorth \
             --os-type Linux \
-            --image "lukamihevc/sportni-dogodki:${{ github.sha }}" \
+            --image "$IMAGE" \
             --cpu 1 \
             --memory 1.5 \
             --ports 8080 \
             --protocol TCP \
             --ip-address Public \
             --dns-name-label "$DNS_LABEL" \
-            --restart-policy OnFailure
+            --restart-policy Always
+
+          az container show \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "$CONTAINER_NAME" \
+            --query "{State:instanceView.state,Image:containers[0].image,FQDN:ipAddress.fqdn}" \
+            --output table
