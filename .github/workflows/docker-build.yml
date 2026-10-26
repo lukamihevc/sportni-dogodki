@@ -14,13 +14,10 @@ permissions:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v3
 
       - name: Login to Docker Hub
         uses: docker/login-action@v3
@@ -45,42 +42,28 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Deploy to Azure Container Instances
+      - name: Deploy to Azure
         shell: bash
         run: |
           set -euo pipefail
-
-          RESOURCE_GROUP="rg-sportni-dogodki"
-          CONTAINER_NAME="sportni-dogodki"
-          IMAGE="lukamihevc/sportni-dogodki:${{ github.sha }}"
-
-          DNS_LABEL=$(az container show \
-            --resource-group "$RESOURCE_GROUP" \
-            --name "$CONTAINER_NAME" \
-            --query ipAddress.dnsNameLabel \
-            --output tsv)
-
-          if [ -z "$DNS_LABEL" ] || [ "$DNS_LABEL" = "None" ]; then
-            echo "ERROR: Azure DNS label was not found."
-            exit 1
-          fi
+          RG="rg-sportni-dogodki"
+          NAME="sportni-dogodki"
+          DNS=$(az container show -g "$RG" -n "$NAME" --query ipAddress.dnsNameLabel -o tsv)
 
           az container create \
-            --resource-group "$RESOURCE_GROUP" \
-            --name "$CONTAINER_NAME" \
+            --resource-group "$RG" \
+            --name "$NAME" \
             --location switzerlandnorth \
             --os-type Linux \
-            --image "$IMAGE" \
+            --image "lukamihevc/sportni-dogodki:${{ github.sha }}" \
             --cpu 1 \
             --memory 1.5 \
             --ports 8080 \
             --protocol TCP \
             --ip-address Public \
-            --dns-name-label "$DNS_LABEL" \
+            --dns-name-label "$DNS" \
             --restart-policy Always
 
-          az container show \
-            --resource-group "$RESOURCE_GROUP" \
-            --name "$CONTAINER_NAME" \
+          az container show -g "$RG" -n "$NAME" \
             --query "{State:instanceView.state,Image:containers[0].image,FQDN:ipAddress.fqdn}" \
-            --output table
+            -o table
