@@ -6,4 +6,18 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="SportniDogodki.Tests/**" />
+    <Content Remove="SportniDogodki.Tests/**" />
+    <None Remove="SportniDogodki.Tests/**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="SportniDogodki.Tests" />
+  </ItemGroup>
+
 </Project>
