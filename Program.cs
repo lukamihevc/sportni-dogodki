@@ -1,22 +1,40 @@
-
 var builder = WebApplication.CreateBuilder(args);
-
-builder.Services.AddRazorPages();
 
 var app = builder.Build();
 
 if (!app.Environment.IsDevelopment())
 {
-    app.UseExceptionHandler("/Error");
+    app.UseExceptionHandler(errorApp =>
+    {
+        errorApp.Run(async context =>
+        {
+            context.Response.StatusCode =
+                StatusCodes.Status500InternalServerError;
+
+            await context.Response.WriteAsJsonAsync(
+                new { error = "Prislo je do napake na strezniku." }
+            );
+        });
+    });
+
     app.UseHsts();
 }
 
-app.UseRouting();
-app.UseAuthorization();
+app.MapGet(
+    "/",
+    () => Results.Text(
+        """
+        Sportni dogodki API
 
-app.MapStaticAssets();
-app.MapRazorPages().WithStaticAssets();
+        Razpolozljive povezave:
+
+        /health - Preverjanje delovanja aplikacije
+        """,
+        "text/plain; charset=utf-8"
+    )
+);
 
 app.MapGet("/health", () => Results.Ok("OK"));
+
 
 app.Run();
