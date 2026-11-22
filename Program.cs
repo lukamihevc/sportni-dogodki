@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Authentication.Cookies;
+
 var builder = WebApplication.CreateBuilder(args);
 
 var connectionString = builder.Configuration
@@ -8,9 +10,24 @@ var connectionString = builder.Configuration
 
 builder.Services.AddSingleton(new Baza(connectionString));
 
+// Avtentikacija in avtorizacija
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
+    {
+        options.Cookie.Name = "SportniDogodki.Auth";
+        options.Cookie.HttpOnly = true;
+        options.Cookie.SameSite = SameSiteMode.Lax;
+        options.Events.OnRedirectToLogin = context =>
+        {
+            // Za API klice vrnemo 401 namesto HTML preusmeritve na /Account/Login
+            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            return Task.CompletedTask;
+        };
+    });
+builder.Services.AddAuthorization();
+
 var app = builder.Build();
 
-// Ustvari bazo in tabele ob zagonu
 await app.Services.GetRequiredService<Baza>().InicializirajAsync();
 
 if (!app.Environment.IsDevelopment())
@@ -31,6 +48,9 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
+app.UseAuthentication();
+app.UseAuthorization();
+
 app.MapGet(
     "/",
     () => Results.Text(
@@ -41,6 +61,9 @@ app.MapGet(
 
         /health                           - Preverjanje delovanja aplikacije
         POST /api/uporabniki/registracija - Registracija uporabnika
+        POST /api/uporabniki/prijava      - Prijava uporabnika
+        POST /api/uporabniki/odjava       - Odjava uporabnika
+        GET  /api/uporabniki/trenutni     - Podatki prijavljenega uporabnika (zaščiteno)
         """,
         "text/plain; charset=utf-8"
     )
@@ -49,6 +72,7 @@ app.MapGet(
 app.MapGet("/health", () => Results.Ok("OK"));
 
 app.MapRegistracijaUporabnika();
+app.MapAvtentikacijaUporabnika();
 
 app.Run();
 
