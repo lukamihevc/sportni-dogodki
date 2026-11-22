@@ -47,7 +47,9 @@ public sealed class Baza(string connectionString)
               naziv TEXT NOT NULL,
               max_ekip INTEGER NOT NULL CHECK (max_ekip > 0),
               status TEXT NOT NULL DEFAULT 'odprto'
-                CHECK (status IN ('odprto', 'zaprto'))
+                CHECK (status IN ('odprto', 'zaprto')),
+              rok_prijav TEXT NOT NULL,
+              organizator_id INTEGER NOT NULL REFERENCES uporabnik(id)
             );
 
             CREATE TABLE IF NOT EXISTS prijava_ekipe (
@@ -58,6 +60,14 @@ public sealed class Baza(string connectionString)
                 CHECK (status IN ('V obdelavi', 'Potrjena', 'Zavrnjena')),
               datum_prijave TEXT NOT NULL,
               UNIQUE (ekipa_id, tekmovanje_id)
+            );
+
+            CREATE TABLE IF NOT EXISTS obvestilo (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              uporabnik_id INTEGER NOT NULL REFERENCES uporabnik(id),
+              vsebina TEXT NOT NULL,
+              ustvarjeno TEXT NOT NULL,
+              prebrano INTEGER NOT NULL DEFAULT 0
             );
             """;
         await command.ExecuteNonQueryAsync();

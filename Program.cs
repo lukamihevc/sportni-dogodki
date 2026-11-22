@@ -71,6 +71,8 @@ app.MapGet(
         POST /api/uporabniki/odjava       - Odjava uporabnika
         GET  /api/uporabniki/trenutni     - Podatki prijavljenega uporabnika (zaščiteno)
         POST /api/tekmovanja/{id}/prijave - Prijava ekipe na tekmovanje (vodja ekipe)
+        DELETE /api/tekmovanja/{id}/prijave/{prijavaId} - Preklic prijave (vodja ekipe)
+        GET  /api/obvestila               - Obvestila prijavljenega uporabnika (zaščiteno)
         """,
         "text/plain; charset=utf-8"
     )
@@ -81,6 +83,8 @@ app.MapGet("/health", () => Results.Ok("OK"));
 app.MapRegistracijaUporabnika();
 app.MapAvtentikacijaUporabnika();
 app.MapPrijavaEkipe();
+app.MapPreklicPrijave();
+app.MapObvestila();
 
 app.Run();
 

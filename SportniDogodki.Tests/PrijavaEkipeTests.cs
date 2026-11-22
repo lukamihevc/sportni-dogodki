@@ -69,24 +69,33 @@ public class PrijavaEkipeTests
             ("@vodja", vodjaId)
         );
 
-    internal static Task<long> DodajTekmovanjeAsync(
+    internal static async Task<long> DodajTekmovanjeAsync(
         Baza baza,
         int maxEkip = 8,
-        string status = "odprto"
+        string status = "odprto",
+        DateTimeOffset? rokPrijav = null,
+        long? organizatorId = null
+    ) =>
+        await VstaviAsync(
+            baza,
+            """
+            INSERT INTO tekmovanje (naziv, max_ekip, status, rok_prijav, organizator_id)
+            VALUES ('Turnir', @max, @status, @rok, @organizator) RETURNING id;
+            """,
+            ("@max", maxEkip),
+            ("@status", status),
+            ("@rok", (rokPrijav ?? DateTimeOffset.UtcNow.AddDays(7)).ToString("O")),
+            ("@organizator", organizatorId ?? await DodajUporabnikaAsync(baza, "organizator"))
+        );
+
+    internal static Task<long> DodajPrijavoAsync(
+        Baza baza,
+        long ekipaId,
+        long tekmovanjeId,
+        string status = PrijavaEkipe.StatusVObdelavi
     ) =>
         VstaviAsync(
             baza,
-            """
-            INSERT INTO tekmovanje (naziv, max_ekip, status)
-            VALUES ('Turnir', @max, @status) RETURNING id;
-            """,
-            ("@max", maxEkip),
-            ("@status", status)
-        );
-
-    private Task<long> DodajPrijavoAsync(long ekipaId, long tekmovanjeId, string status) =>
-        VstaviAsync(
-            _baza,
             """
             INSERT INTO prijava_ekipe (ekipa_id, tekmovanje_id, status, datum_prijave)
             VALUES (@e, @t, @s, '2026-01-01') RETURNING id;
@@ -147,7 +156,7 @@ public class PrijavaEkipeTests
     {
         var tekmovanje = await DodajTekmovanjeAsync(_baza, maxEkip: 1);
         var drugaEkipa = await DodajEkipoAsync(_baza, await DodajUporabnikaAsync(_baza));
-        await DodajPrijavoAsync(drugaEkipa, tekmovanje, PrijavaEkipe.StatusVObdelavi);
+        await DodajPrijavoAsync(_baza, drugaEkipa, tekmovanje, PrijavaEkipe.StatusVObdelavi);
 
         var vodja = await DodajUporabnikaAsync(_baza);
         var ekipa = await DodajEkipoAsync(_baza, vodja);
@@ -200,7 +209,7 @@ public class PrijavaEkipeTests
     {
         var tekmovanje = await DodajTekmovanjeAsync(_baza, maxEkip: 1);
         var drugaEkipa = await DodajEkipoAsync(_baza, await DodajUporabnikaAsync(_baza));
-        await DodajPrijavoAsync(drugaEkipa, tekmovanje, PrijavaEkipe.StatusZavrnjena);
+        await DodajPrijavoAsync(_baza, drugaEkipa, tekmovanje, PrijavaEkipe.StatusZavrnjena);
 
         var vodja = await DodajUporabnikaAsync(_baza);
         var ekipa = await DodajEkipoAsync(_baza, vodja);
@@ -288,15 +297,16 @@ public class PrijavaEkipeTests
 
     // ---------- Celoten HTTP pipeline ----------
 
-    private WebApplicationFactory<Program> UstvariAplikacijo() =>
+    internal static WebApplicationFactory<Program> UstvariAplikacijo(string pot) =>
         new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
         {
             builder.UseEnvironment("Development");
-            builder.UseSetting("ConnectionStrings:DefaultConnection", $"Data Source={_pot}");
+            builder.UseSetting("ConnectionStrings:DefaultConnection", $"Data Source={pot}");
         });
 
-    private async Task<(HttpClient Client, long UporabnikId)> PrijavljenClientAsync(
+    internal static async Task<(HttpClient Client, long UporabnikId)> PrijavljenClientAsync(
         WebApplicationFactory<Program> factory,
+        Baza baza,
         string vloga
     )
     {
@@ -311,7 +321,7 @@ public class PrijavaEkipeTests
         var id = (await reg.Content.ReadFromJsonAsync<RegistracijaOdgovor>())!.Id;
 
         // Vloga se nastavi neposredno v bazi (registracija vedno dodeli "tekmovalec")
-        await using (var conn = await _baza.OdpriAsync())
+        await using (var conn = await baza.OdpriAsync())
         await using (var cmd = conn.CreateCommand())
         {
             cmd.CommandText = "UPDATE uporabnik SET vloga = @v WHERE id = @id;";
@@ -332,8 +342,8 @@ public class PrijavaEkipeTests
     [TestMethod]
     public async Task Test_Http_VodjaPrijaviEkipo_Vrne201()
     {
-        await using var factory = UstvariAplikacijo();
-        var (client, vodja) = await PrijavljenClientAsync(factory, "vodja");
+        await using var factory = UstvariAplikacijo(_pot);
+        var (client, vodja) = await PrijavljenClientAsync(factory, _baza, "vodja");
         using var _ = client;
         var ekipa = await DodajEkipoAsync(_baza, vodja);
         var tekmovanje = await DodajTekmovanjeAsync(_baza);
@@ -355,8 +365,8 @@ public class PrijavaEkipeTests
     [TestMethod]
     public async Task Test_Http_TekmovalecNeMorePrijaviti_Vrne403()
     {
-        await using var factory = UstvariAplikacijo();
-        var (client, uporabnik) = await PrijavljenClientAsync(factory, "tekmovalec");
+        await using var factory = UstvariAplikacijo(_pot);
+        var (client, uporabnik) = await PrijavljenClientAsync(factory, _baza, "tekmovalec");
         using var _ = client;
         var ekipa = await DodajEkipoAsync(_baza, uporabnik);
         var tekmovanje = await DodajTekmovanjeAsync(_baza);
@@ -372,7 +382,7 @@ public class PrijavaEkipeTests
     [TestMethod]
     public async Task Test_Http_BrezPrijave_Vrne401()
     {
-        await using var factory = UstvariAplikacijo();
+        await using var factory = UstvariAplikacijo(_pot);
         using var client = factory.CreateClient();
 
         var odgovor = await client.PostAsJsonAsync(
