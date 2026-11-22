@@ -23,4 +23,17 @@
     <ProjectReference Include="..\SportniDogodki.csproj" />
   </ItemGroup>
 
+    <PropertyGroup>
+    <CollectCoverage>true</CollectCoverage>
+    <Include>[SportniDogodki]*</Include>
+    <ExcludeByFile>**/Program.cs</ExcludeByFile>
+    <ExcludeByAttribute>GeneratedCodeAttribute</ExcludeByAttribute>
+    <Threshold>100</Threshold>
+    <ThresholdType>line</ThresholdType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
 </Project>

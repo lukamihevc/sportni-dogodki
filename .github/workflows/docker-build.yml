@@ -1,10 +1,7 @@
-
-name: Build and deploy to Azure
+name: Test, build and deploy to Azure
 
 on:
   push:
-    branches:
-      - main
   workflow_dispatch:
 
 permissions:
@@ -12,7 +9,35 @@ permissions:
   id-token: write
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore SportniDogodki.Tests/SportniDogodki.Tests.csproj
+
+      - name: Unit testi (100 % pokritost)
+        run: >
+          dotnet test SportniDogodki.Tests/SportniDogodki.Tests.csproj
+          --no-restore
+          --logger "trx;LogFileName=rezultati.trx"
+          --results-directory TestResults
+
+      - name: Shrani rezultate testov
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rezultati-testov
+          path: TestResults
+
   build-and-deploy:
+    needs: test
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
