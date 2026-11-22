@@ -23,6 +23,12 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
             return Task.CompletedTask;
         };
+        options.Events.OnRedirectToAccessDenied = context =>
+        {
+            // Prijavljen uporabnik brez ustrezne vloge dobi 403 namesto preusmeritve
+            context.Response.StatusCode = StatusCodes.Status403Forbidden;
+            return Task.CompletedTask;
+        };
     });
 builder.Services.AddAuthorization();
 
@@ -64,6 +70,7 @@ app.MapGet(
         POST /api/uporabniki/prijava      - Prijava uporabnika
         POST /api/uporabniki/odjava       - Odjava uporabnika
         GET  /api/uporabniki/trenutni     - Podatki prijavljenega uporabnika (zaščiteno)
+        POST /api/tekmovanja/{id}/prijave - Prijava ekipe na tekmovanje (vodja ekipe)
         """,
         "text/plain; charset=utf-8"
     )
@@ -73,6 +80,7 @@ app.MapGet("/health", () => Results.Ok("OK"));
 
 app.MapRegistracijaUporabnika();
 app.MapAvtentikacijaUporabnika();
+app.MapPrijavaEkipe();
 
 app.Run();
 
