@@ -51,3 +51,5 @@ app.MapGet("/health", () => Results.Ok("OK"));
 app.MapRegistracijaUporabnika();
 
 app.Run();
+
+public partial class Program { }

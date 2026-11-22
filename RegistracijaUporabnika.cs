@@ -51,6 +51,7 @@ public static partial class RegistracijaUporabnika
         var priimek = zahteva.Priimek!.Trim();
         var email = zahteva.Email!.Trim().ToLowerInvariant();
 
+        long id;
         try
         {
             await using var connection = await baza.OdpriAsync(ct);
@@ -69,12 +70,7 @@ public static partial class RegistracijaUporabnika
             );
             vnos.Parameters.AddWithValue("@vloga", PrivzetaVloga);
 
-            var id = Convert.ToInt64(await vnos.ExecuteScalarAsync(ct));
-
-            return Results.Created(
-                $"/api/uporabniki/{id}",
-                new RegistracijaOdgovor(id, ime, priimek, email, PrivzetaVloga)
-            );
+            id = Convert.ToInt64(await vnos.ExecuteScalarAsync(ct));
         }
         catch (SqliteException ex) when (ex.SqliteErrorCode == 19)
         {
@@ -92,6 +88,11 @@ public static partial class RegistracijaUporabnika
                 statusCode: StatusCodes.Status503ServiceUnavailable
             );
         }
+
+        return Results.Created(
+            $"/api/uporabniki/{id}",
+            new RegistracijaOdgovor(id, ime, priimek, email, PrivzetaVloga)
+        );
     }
 
     internal static Dictionary<string, string[]> Validiraj(

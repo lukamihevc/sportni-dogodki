@@ -23,4 +23,22 @@
     <ProjectReference Include="..\SportniDogodki.csproj" />
   </ItemGroup>
 
+    <PropertyGroup>
+  <CollectCoverage>true</CollectCoverage>
+  <Include>[SportniDogodki]*</Include>
+  <Exclude>[SportniDogodki]SportniDogodki.Pages.*,[SportniDogodki]Pages_*</Exclude>
+  <ExcludeByFile>**/Program.cs,**/Pages/*.cs,**/Pages/**/*.cs,**/*.cshtml</ExcludeByFile>
+  <ExcludeByAttribute>GeneratedCodeAttribute</ExcludeByAttribute>
+  <Threshold>100</Threshold>
+  <ThresholdType>line</ThresholdType>
+</PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.*" />
+  </ItemGroup>
+
 </Project>

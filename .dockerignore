@@ -1,0 +1,5 @@
+SportniDogodki.Tests/
+**/bin/
+**/obj/
+data/
+TestResults/
