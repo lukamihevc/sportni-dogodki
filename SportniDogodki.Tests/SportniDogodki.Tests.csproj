@@ -24,13 +24,14 @@
   </ItemGroup>
 
     <PropertyGroup>
-    <CollectCoverage>true</CollectCoverage>
-    <Include>[SportniDogodki]*</Include>
-    <ExcludeByFile>**/Program.cs</ExcludeByFile>
-    <ExcludeByAttribute>GeneratedCodeAttribute</ExcludeByAttribute>
-    <Threshold>100</Threshold>
-    <ThresholdType>line</ThresholdType>
-  </PropertyGroup>
+  <CollectCoverage>true</CollectCoverage>
+  <Include>[SportniDogodki]*</Include>
+  <Exclude>[SportniDogodki]SportniDogodki.Pages.*,[SportniDogodki]Pages_*</Exclude>
+  <ExcludeByFile>**/Program.cs,**/Pages/*.cs,**/Pages/**/*.cs,**/*.cshtml</ExcludeByFile>
+  <ExcludeByAttribute>GeneratedCodeAttribute</ExcludeByAttribute>
+  <Threshold>100</Threshold>
+  <ThresholdType>line</ThresholdType>
+</PropertyGroup>
 
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />

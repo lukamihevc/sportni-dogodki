@@ -237,4 +237,56 @@ public class RegistracijaUporabnikaTests
             "/api/uporabniki/registracija"
         );
     }
+
+    [TestMethod]
+public async Task Test_RegistrirajAsync_DrugaNapakaSqlite()
+{
+    var pot = Path.Combine(Path.GetTempPath(), $"napaka_sqlite_{Guid.NewGuid()}.db");
+    var baza = new Baza($"Data Source={pot}");
+
+    await using (var conn = await baza.OdpriAsync())
+    await using (var cmd = conn.CreateCommand())
+    {
+        cmd.CommandText = """
+            CREATE TABLE uporabnik (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                ime TEXT NOT NULL,
+                priimek TEXT NOT NULL,
+                email TEXT NOT NULL,
+                geslo TEXT NOT NULL
+            );
+            """;
+        await cmd.ExecuteNonQueryAsync();
+    }
+
+    try
+    {
+        var rezultat = await Registriraj(Veljavna(), baza);
+        Assert.AreEqual(503, Status(rezultat));
+    }
+    finally
+    {
+        SqliteConnection.ClearAllPools();
+        if (File.Exists(pot))
+            File.Delete(pot);
+    }
+}
+
+[TestMethod]
+public async Task Test_RegistrirajAsync_PreklicanToken()
+{
+    using var cts = new CancellationTokenSource();
+    await cts.CancelAsync();
+
+    await Assert.ThrowsExactlyAsync<TaskCanceledException>(async () =>
+    {
+        await RegistracijaUporabnika.RegistrirajAsync(
+            Veljavna(),
+            _baza,
+            NullLogger<Program>.Instance,
+            cts.Token
+        );
+    });
+}
+
 }
